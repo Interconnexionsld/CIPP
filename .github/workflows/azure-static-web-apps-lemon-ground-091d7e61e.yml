@@ -2,16 +2,15 @@ name: Azure Static Web Apps CI/CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
     types: [opened, synchronize, reopened, closed]
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build_and_deploy_job:
+    # garde ta condition élargie (inclut workflow_dispatch)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
@@ -21,11 +20,37 @@ jobs:
           submodules: true
           lfs: false
 
+      # fixe la version de Node pour Next.js (18 ou 20 selon ton projet)
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'         # mets '20' si ton projet est sur Node 20
+          cache: 'npm'               # ou 'yarn' / 'pnpm' si tu standardises plus tard
+
+      # Build statique Next.js avec fallback sans lockfile
       - name: Build (Next.js static export)
         run: |
-          npm ci
-          npm run build
-          npm run export
+          set -e
+          # Si tu bascules plus tard sur yarn/pnpm, active Corepack:
+          # corepack enable
+          if [ -f yarn.lock ]; then
+            yarn install --frozen-lockfile
+            yarn build
+            yarn export
+          elif [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            pnpm build
+            pnpm export
+          elif [ -f package-lock.json ]; then
+            npm ci
+            npm run build
+            npm run export
+          else
+            # pas de lockfile -> on utilise npm install (OK dans CI)
+            npm install
+            npm run build
+            npm run export
+          fi
 
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
@@ -33,10 +58,10 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "/"     # adapte si ton app est dans un sous-dossier
-          output_location: "out" # <-- sans slash, et correspond à l'export
+          app_location: "/"      # adapte si ton app est dans un sous-dossier
+          output_location: "out" # IMPORTANT: sans slash; correspond à l'export statique
         env:
-          IS_STATIC_EXPORT: "true"   # aide l'action à comprendre qu'on livre un export statique
+          IS_STATIC_EXPORT: "true"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -48,4 +73,3 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: "close"
-
