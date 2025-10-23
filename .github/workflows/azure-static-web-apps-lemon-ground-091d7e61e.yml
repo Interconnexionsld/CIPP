@@ -22,10 +22,11 @@ jobs:
 
       # fixe la version de Node pour Next.js (18 ou 20 selon ton projet)
       - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'         # mets '20' si ton projet est sur Node 20
-          cache: 'npm'               # ou 'yarn' / 'pnpm' si tu standardises plus tard
+  uses: actions/setup-node@v4
+  with:
+    node-version: '22.13.0'   # ← aligne avec "engines.node"
+    cache: 'yarn'             # ou 'npm' si tu passes à npm plus tard
+
 
       # Build statique Next.js avec fallback sans lockfile
       - name: Build (Next.js static export)
@@ -73,3 +74,4 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: "close"
+
