@@ -19,7 +19,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "22.13.0"
+          check-latest: true
 
       - name: Install dependencies
         run: yarn install --network-timeout 500000
